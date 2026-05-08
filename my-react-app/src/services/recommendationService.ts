@@ -12,33 +12,51 @@ const getAuthHeaders = () => {
   };
 };
 
+export interface RecommendationAnalysis {
+  explanation?: string;
+  why_this_field?: string;
+  benefits?: string[];
+  current_strengths?: string[];
+  skills_to_develop?: string[];
+  recommended_path?: string;
+  success_factors?: string[];
+  time_to_competency?: string;
+  career_outlook?: string;
+  suspicion?: { is_suspicious?: boolean; reason?: string; score?: number };
+}
+
+export interface LearningPathPhase {
+  level: string;
+  duration: string;
+  topics: string[];
+  resources?: string[];
+}
+
+export interface LearningPathGoal {
+  id?: string;
+  description?: string;
+  status?: string;
+  dueDate?: string;
+  priority?: string;
+}
+
 export interface RecommendationResponse {
   id: string;
   primaryDomain: string;
   confidence: number;
-  analysis: Record<string, any>;
+  analysis: RecommendationAnalysis;
   secondaryInterests: Array<{ domain: string; score: number; percentile?: number }>;
   learningPath: {
     domain: string;
     currentLevel: string;
     estimatedDuration: string;
-    phases: Array<{
-      level: string;
-      duration: string;
-      topics: string[];
-      resources?: string[];
-    }>;
-    nextPhase?: Record<string, any> | null;
-    goals?: Array<Record<string, any>>;
+    phases: LearningPathPhase[];
+    nextPhase?: LearningPathPhase | null;
+    goals?: LearningPathGoal[];
     progress?: number;
   };
   detailedRecommendations?: {
-    learning_path?: Array<{
-      level: string;
-      duration: string;
-      topics: string[];
-      resources?: string[];
-    }>;
+    learning_path?: LearningPathPhase[];
     top_resources?: Array<{ title: string; type: string; url?: string; why_recommended?: string }>;
     project_ideas?: Array<{ name: string; difficulty: string; duration?: string; description?: string }>;
     skills_required?: string[];

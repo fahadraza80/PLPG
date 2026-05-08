@@ -63,6 +63,16 @@ interface FormErrors {
   interests?: string;
 }
 
+const AUTH_ERROR_CODES = new Set([
+  'NO_TOKEN',
+  'INVALID_HEADER',
+  'INVALID_TOKEN',
+  'INVALID_TOKEN_FORMAT',
+  'TOKEN_EXPIRED',
+  'ACCOUNT_INACTIVE',
+  'INVALID_REFRESH_TOKEN',
+]);
+
 // ===================================================================
 // Step Indicator Component
 // ===================================================================
@@ -490,17 +500,7 @@ const InterestAssessment: React.FC = () => {
   const [showTieResolution, setShowTieResolution] = useState(false);
   const [tieCandidates, setTieCandidates] = useState<string[]>([]);
   const [tieResolvingLoading, setTieResolvingLoading] = useState(false);
-  const shouldPromptLogin = apiErrorCode
-    ? new Set([
-        'NO_TOKEN',
-        'INVALID_HEADER',
-        'INVALID_TOKEN',
-        'INVALID_TOKEN_FORMAT',
-        'TOKEN_EXPIRED',
-        'ACCOUNT_INACTIVE',
-        'INVALID_REFRESH_TOKEN',
-      ]).has(apiErrorCode)
-    : false;
+  const shouldPromptLogin = apiErrorCode ? AUTH_ERROR_CODES.has(apiErrorCode) : false;
 
   // Initialize form with user data
   useEffect(() => {
