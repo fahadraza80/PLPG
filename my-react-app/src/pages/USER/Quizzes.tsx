@@ -5,8 +5,10 @@ import {
   getQuizHistory,
   getUserPerformance,
   generateQuiz,
+  getAvailableQuizzes,
   type QuizAttempt,
   type UserPerformance,
+  type QuizCategory,
 } from '../../services/quizService';
 import LoadingSkeleton from '../../components/LoadingSkeleton';
 import EmptyState from '../../components/EmptyState';
@@ -17,8 +19,10 @@ const Quizzes: React.FC = () => {
 
   const [history, setHistory] = useState<QuizAttempt[]>([]);
   const [performance, setPerformance] = useState<UserPerformance | null>(null);
+  const [categories, setCategories] = useState<QuizCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [generatingQuiz, setGeneratingQuiz] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const primaryInterest = userInterests?.primaryInterest;
 
   useEffect(() => {
@@ -30,11 +34,13 @@ const Quizzes: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      setError(null);
       console.log('Loading quiz data...');
 
-      const [hist, perf] = await Promise.all([
+      const [hist, perf, cats] = await Promise.all([
         getQuizHistory(10),
         getUserPerformance(),
+        getAvailableQuizzes(),
       ]);
 
       console.log('History received:', hist);
@@ -42,10 +48,11 @@ const Quizzes: React.FC = () => {
 
       setHistory(hist);
       setPerformance(perf);
+      setCategories(cats);
     } catch (error: any) {
       console.error('Error loading quiz data:', error);
       console.error('Error details:', error.response?.data || error.message);
-      alert(`Failed to load quiz data: ${error.message}`);
+      setError(error.message || 'Failed to load quiz data.');
     } finally {
       setLoading(false);
     }
@@ -54,14 +61,15 @@ const Quizzes: React.FC = () => {
   const handleStartQuiz = async () => {
     try {
       setGeneratingQuiz(true);
+      setError(null);
       if (!primaryInterest) {
-        alert('Please complete the interest assessment first.');
+        setError('Please complete the interest assessment first.');
         return;
       }
       const quiz = await generateQuiz(primaryInterest, 'Beginner');
       navigate(`/quiz/${quiz.id}`);
     } catch (error: any) {
-      alert(error.message || 'Failed to generate quiz');
+      setError(error.message || 'Failed to generate quiz');
     } finally {
       setGeneratingQuiz(false);
     }
@@ -100,6 +108,11 @@ const Quizzes: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 pt-24 pb-12">
       <div className="max-w-6xl mx-auto px-4">
+        {error && (
+          <div className="mb-6 p-4 rounded-xl border border-red-200 bg-red-50 text-red-700">
+            {error}
+          </div>
+        )}
         {/* Welcome Section */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-6">
           <h1 className="text-2xl font-bold text-slate-900 mb-2">
@@ -248,6 +261,54 @@ const Quizzes: React.FC = () => {
             />
           )}
         </div>
+
+        {/* Quiz Categories */}
+        {categories.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">Quiz Categories</h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {categories.map((category) => {
+                const stats = performance?.byInterest?.[category.interest];
+                return (
+                  <div key={category.interest} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="text-lg font-semibold text-slate-900">{category.interest}</h3>
+                        <p className="text-xs text-slate-500">Available levels: {Object.entries(category.levels)
+                          .filter(([, available]) => available)
+                          .map(([level]) => level)
+                          .join(', ') || 'Coming soon'}</p>
+                      </div>
+                      {category.isPrimary && (
+                        <span className="px-2 py-1 text-xs font-semibold bg-indigo-100 text-indigo-700 rounded-full">Primary</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-600 mb-3">
+                      {category.userConfidence !== null && category.userConfidence !== undefined && (
+                        <span className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-full">
+                          {category.userConfidence}% match
+                        </span>
+                      )}
+                      {category.recommended && (
+                        <span className="px-2 py-1 bg-amber-50 text-amber-700 rounded-full">Recommended</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-slate-700">
+                      <p className="flex items-center justify-between">
+                        <span>Average Score</span>
+                        <span className="font-semibold">{stats ? `${stats.averageScore}%` : '—'}</span>
+                      </p>
+                      <p className="flex items-center justify-between mt-1">
+                        <span>Total Quizzes</span>
+                        <span className="font-semibold">{stats ? stats.totalQuizzes : 0}</span>
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Recent Quiz History */}
         {history.length > 0 && (

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
+import { buildApiError } from '../../services/apiError';
 import LoadingSkeleton from '../../components/LoadingSkeleton';
 import ErrorState from '../../components/ErrorState';
 
@@ -93,11 +94,10 @@ const Profile: React.FC = () => {
         },
       });
 
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error('Failed to fetch profile');
+        throw buildApiError(data, response.status);
       }
-
-      const data = await response.json();
       setProfile(data);
       setFormData({
         first_name: data.first_name || '',
@@ -186,12 +186,10 @@ const Profile: React.FC = () => {
         }),
       });
 
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to update profile');
+        throw buildApiError(data, response.status);
       }
-
-      const data = await response.json();
       setProfile(data.user);
       setIsEditing(false);
       setSuccess('Changes saved.');

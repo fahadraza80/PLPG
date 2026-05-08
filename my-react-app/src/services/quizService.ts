@@ -4,6 +4,7 @@
  */
 
 import axios from 'axios';
+import { buildApiError } from './apiError';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -59,6 +60,9 @@ export interface QuizCategory {
     Intermediate: number;
     Advanced: number;
   };
+  isPrimary?: boolean;
+  userConfidence?: number | null;
+  recommended?: boolean;
 }
 
 export interface UserPerformance {
@@ -133,9 +137,12 @@ export const generateQuiz = async (
     if (response.data.success) {
       return response.data.quiz;
     }
-    throw new Error(response.data.message || 'Failed to generate quiz');
+    throw buildApiError(response.data, response.status);
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || error.message || 'Failed to generate quiz');
+    if (error.response) {
+      throw buildApiError(error.response.data, error.response.status);
+    }
+    throw new Error(error.message || 'Failed to generate quiz');
   }
 };
 
@@ -152,9 +159,12 @@ export const getQuiz = async (quizId: string): Promise<Quiz> => {
     if (response.data.success) {
       return response.data.quiz;
     }
-    throw new Error(response.data.message || 'Failed to fetch quiz');
+    throw buildApiError(response.data, response.status);
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch quiz');
+    if (error.response) {
+      throw buildApiError(error.response.data, error.response.status);
+    }
+    throw new Error(error.message || 'Failed to fetch quiz');
   }
 };
 
@@ -175,9 +185,12 @@ export const submitQuiz = async (
     if (response.data.success) {
       return response.data.attempt;
     }
-    throw new Error(response.data.message || 'Failed to submit quiz');
+    throw buildApiError(response.data, response.status);
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || error.message || 'Failed to submit quiz');
+    if (error.response) {
+      throw buildApiError(error.response.data, error.response.status);
+    }
+    throw new Error(error.message || 'Failed to submit quiz');
   }
 };
 
@@ -194,9 +207,12 @@ export const getAvailableQuizzes = async (): Promise<QuizCategory[]> => {
     if (response.data.success) {
       return response.data.categories;
     }
-    throw new Error(response.data.message || 'Failed to fetch categories');
+    throw buildApiError(response.data, response.status);
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch categories');
+    if (error.response) {
+      throw buildApiError(error.response.data, error.response.status);
+    }
+    throw new Error(error.message || 'Failed to fetch categories');
   }
 };
 
@@ -213,9 +229,12 @@ export const getQuizHistory = async (limit: number = 20): Promise<QuizAttempt[]>
     if (response.data.success) {
       return response.data.attempts;
     }
-    throw new Error(response.data.message || 'Failed to fetch quiz history');
+    throw buildApiError(response.data, response.status);
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch quiz history');
+    if (error.response) {
+      throw buildApiError(error.response.data, error.response.status);
+    }
+    throw new Error(error.message || 'Failed to fetch quiz history');
   }
 };
 
@@ -233,9 +252,12 @@ export const getUserPerformance = async (interest?: string): Promise<UserPerform
     if (response.data.success) {
       return response.data.performance;
     }
-    throw new Error(response.data.message || 'Failed to fetch performance data');
+    throw buildApiError(response.data, response.status);
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch performance data');
+    if (error.response) {
+      throw buildApiError(error.response.data, error.response.status);
+    }
+    throw new Error(error.message || 'Failed to fetch performance data');
   }
 };
 
@@ -252,9 +274,12 @@ export const getQuizAttempt = async (attemptId: string): Promise<QuizAttempt> =>
     if (response.data.success) {
       return response.data.attempt;
     }
-    throw new Error(response.data.message || 'Failed to fetch attempt');
+    throw buildApiError(response.data, response.status);
   } catch (error: any) {
-    throw new Error(error.response?.data?.message || error.message || 'Failed to fetch attempt');
+    if (error.response) {
+      throw buildApiError(error.response.data, error.response.status);
+    }
+    throw new Error(error.message || 'Failed to fetch attempt');
   }
 };
 

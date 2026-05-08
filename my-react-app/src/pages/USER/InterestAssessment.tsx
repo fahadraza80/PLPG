@@ -3,6 +3,8 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import type { InterestDomain, InterestScores, AnalysisResponse } from '../../services/interestService';
 import { submitInterestAssessment, checkInterestApiHealth, resolveTie } from '../../services/interestService';
+import { generateRecommendation } from '../../services/recommendationService';
+import type { ApiError } from '../../services/apiError';
 
 // ===================================================================
 // Constants & Types
@@ -44,15 +46,15 @@ const DOMAIN_COLORS: Record<InterestDomain, string> = {
 };
 
 const defaultScores: InterestScores = {
-  Coding: 5,
-  'Web Development': 5,
-  'Game Development': 5,
-  Cybersecurity: 5,
-  'Data Science': 5,
-  'Mobile Development': 5,
-  'Cloud Computing': 5,
-  'AI & Machine Learning': 5,
-  'Physical Games / Sports': 5,
+  Coding: 0,
+  'Web Development': 0,
+  'Game Development': 0,
+  Cybersecurity: 0,
+  'Data Science': 0,
+  'Mobile Development': 0,
+  'Cloud Computing': 0,
+  'AI & Machine Learning': 0,
+  'Physical Games / Sports': 0,
 };
 
 interface FormErrors {
@@ -69,7 +71,7 @@ interface StepIndicatorProps {
   totalSteps: number;
 }
 
-const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {
+const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, totalSteps }) => {
   const steps = [
     { num: 1, label: 'Personal Info' },
     { num: 2, label: 'Rate Interests' },
@@ -77,36 +79,41 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {
   ];
 
   return (
-    <div className="flex items-center justify-center mb-8">
-      {steps.map((step, idx) => (
-        <React.Fragment key={step.num}>
-          <div className="flex flex-col items-center">
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${currentStep >= step.num
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
-                  : 'bg-slate-200 text-slate-500'
-                }`}
-            >
-              {currentStep > step.num ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              ) : (
-                step.num
-              )}
+    <div className="mb-8">
+      <p className="text-center text-sm font-semibold text-slate-500 mb-3">
+        Step {currentStep} of {totalSteps}
+      </p>
+      <div className="flex items-center justify-center">
+        {steps.map((step, idx) => (
+          <React.Fragment key={step.num}>
+            <div className="flex flex-col items-center">
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${currentStep >= step.num
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                    : 'bg-slate-200 text-slate-500'
+                  }`}
+              >
+                {currentStep > step.num ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  step.num
+                )}
+              </div>
+              <span className={`mt-2 text-xs font-medium ${currentStep >= step.num ? 'text-indigo-600' : 'text-slate-400'}`}>
+                {step.label}
+              </span>
             </div>
-            <span className={`mt-2 text-xs font-medium ${currentStep >= step.num ? 'text-indigo-600' : 'text-slate-400'}`}>
-              {step.label}
-            </span>
-          </div>
-          {idx < steps.length - 1 && (
-            <div
-              className={`w-16 sm:w-24 h-1 mx-2 rounded-full transition-all duration-300 ${currentStep > step.num ? 'bg-indigo-600' : 'bg-slate-200'
-                }`}
-            />
-          )}
-        </React.Fragment>
-      ))}
+            {idx < steps.length - 1 && (
+              <div
+                className={`w-16 sm:w-24 h-1 mx-2 rounded-full transition-all duration-300 ${currentStep > step.num ? 'bg-indigo-600' : 'bg-slate-200'
+                  }`}
+              />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
     </div>
   );
 };
@@ -182,8 +189,8 @@ interface InterestSliderProps {
 
 const InterestSlider: React.FC<InterestSliderProps> = ({ domain, value, onChange }) => {
   const getValueLabel = (val: number) => {
-    if (val <= 2) return 'Not Interested';
-    if (val <= 4) return 'Slightly Interested';
+    if (val <= 1) return 'Not Interested';
+    if (val <= 3) return 'Slightly Interested';
     if (val <= 6) return 'Moderately Interested';
     if (val <= 8) return 'Very Interested';
     return 'Passionate';
@@ -211,7 +218,7 @@ const InterestSlider: React.FC<InterestSliderProps> = ({ domain, value, onChange
       <div className="relative">
         <input
           type="range"
-          min={1}
+          min={0}
           max={10}
           step={1}
           value={value}
@@ -223,7 +230,7 @@ const InterestSlider: React.FC<InterestSliderProps> = ({ domain, value, onChange
             [&::-webkit-slider-thumb]:hover:bg-indigo-700 [&::-webkit-slider-thumb]:transition-colors"
         />
         <div className="flex justify-between text-[10px] text-slate-400 mt-1 px-1">
-          <span>1</span>
+          <span>0</span>
           <span>5</span>
           <span>10</span>
         </div>
@@ -241,6 +248,14 @@ interface ResultsPanelProps {
 
 const ResultsPanel: React.FC<ResultsPanelProps> = ({ result }) => {
   const navigate = useNavigate();
+  const tagSet = new Set<string>();
+  result.recommendation?.skill_roadmap?.forEach((level) => {
+    level.topics?.forEach((topic) => tagSet.add(topic));
+  });
+  result.recommendation?.career_paths?.forEach((career) => {
+    career.required_skills?.forEach((skill) => tagSet.add(skill));
+  });
+  const tags = Array.from(tagSet).filter(Boolean).slice(0, 8);
 
   return (
     <div className="space-y-6">
@@ -266,6 +281,22 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({ result }) => {
         </div>
         <p className="text-sm text-white/90">{result.recommendation.justification}</p>
       </div>
+
+      {/* Tags */}
+      {tags.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-200 p-5">
+          <h4 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+            <span className="text-lg">🏷️</span> Key Tags
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <span key={tag} className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Explainable Reasoning */}
       <div className="bg-blue-50 rounded-xl border border-blue-200 p-5">
@@ -410,7 +441,7 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({ result }) => {
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-3">
         <button
-          onClick={() => navigate('/profile')}
+          onClick={() => navigate('/dashboard')}
           className="flex-1 py-3 px-6 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -452,12 +483,24 @@ const InterestAssessment: React.FC = () => {
   const [result, setResult] = useState<AnalysisResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [apiErrorCode, setApiErrorCode] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   
   // Tie detection state
   const [showTieResolution, setShowTieResolution] = useState(false);
   const [tieCandidates, setTieCandidates] = useState<string[]>([]);
   const [tieResolvingLoading, setTieResolvingLoading] = useState(false);
+  const shouldPromptLogin = apiErrorCode
+    ? new Set([
+        'NO_TOKEN',
+        'INVALID_HEADER',
+        'INVALID_TOKEN',
+        'INVALID_TOKEN_FORMAT',
+        'TOKEN_EXPIRED',
+        'ACCOUNT_INACTIVE',
+        'INVALID_REFRESH_TOKEN',
+      ]).has(apiErrorCode)
+    : false;
 
   // Initialize form with user data
   useEffect(() => {
@@ -525,6 +568,7 @@ const InterestAssessment: React.FC = () => {
   // Handle score change
   const handleScoreChange = (domain: InterestDomain, value: number) => {
     setScores((prev) => ({ ...prev, [domain]: value }));
+    setErrors((prev) => ({ ...prev, interests: undefined }));
   };
 
   // Reset all scores
@@ -532,9 +576,23 @@ const InterestAssessment: React.FC = () => {
     setScores({ ...defaultScores });
     setResult(null);
     setApiError(null);
+    setApiErrorCode(null);
     setCurrentStep(1);
     setErrors({});
   };
+
+  const validateScores = useCallback((): boolean => {
+    const totalScore = Object.values(scores).reduce((sum, value) => sum + value, 0);
+    if (totalScore <= 0) {
+      setErrors((prev) => ({
+        ...prev,
+        interests: 'Please rate at least one interest above 0.',
+      }));
+      return false;
+    }
+    setErrors((prev) => ({ ...prev, interests: undefined }));
+    return true;
+  }, [scores]);
 
   // Submit assessment
   const handleSubmit = async (e: React.FormEvent) => {
@@ -545,8 +603,13 @@ const InterestAssessment: React.FC = () => {
       return;
     }
 
+    if (!validateScores()) {
+      return;
+    }
+
     setLoading(true);
     setApiError(null);
+    setApiErrorCode(null);
 
     try {
       const payload = {
@@ -564,9 +627,11 @@ const InterestAssessment: React.FC = () => {
         setTieCandidates(data.tie_detected.tie_candidates);
         console.info('Tie detected - showing resolution prompt');
       } else {
+        await generateRecommendation(scores);
+
         // No tie, proceed to results
         setCurrentStep(3);
-        
+
         // Update store with onboarding completion
         setOnboardingComplete({
           primaryInterest: data.primary_interest,
@@ -579,8 +644,10 @@ const InterestAssessment: React.FC = () => {
         });
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+      const error = err as ApiError;
+      const errorMessage = error?.message || 'Something went wrong. Please try again.';
       setApiError(errorMessage);
+      setApiErrorCode(error?.code || null);
     } finally {
       setLoading(false);
     }
@@ -600,6 +667,7 @@ const InterestAssessment: React.FC = () => {
         setResult(updatedResult);
       }
       
+      await generateRecommendation(scores);
       setCurrentStep(3);
       
       // Update store
@@ -613,8 +681,10 @@ const InterestAssessment: React.FC = () => {
         completedAt: new Date().toISOString(),
       });
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to resolve tie';
+      const error = err as ApiError;
+      const errorMessage = error?.message || 'Failed to resolve tie';
       setApiError(errorMessage);
+      setApiErrorCode(error?.code || null);
     } finally {
       setTieResolvingLoading(false);
     }
@@ -644,7 +714,7 @@ const InterestAssessment: React.FC = () => {
         </div>
 
         {/* Step Indicator */}
-        <StepIndicator currentStep={currentStep} totalSteps={3} />
+          <StepIndicator currentStep={currentStep} totalSteps={3} />
 
         {/* Main Content */}
         <div className="grid lg:grid-cols-3 gap-8">
@@ -780,7 +850,7 @@ const InterestAssessment: React.FC = () => {
                       </div>
                       <div>
                         <h2 className="text-xl font-bold text-slate-900">Rate Your Interests</h2>
-                        <p className="text-sm text-slate-500">Score each domain from 1 (Low) to 10 (High)</p>
+                        <p className="text-sm text-slate-500">Score each domain from 0 (Low) to 10 (High)</p>
                       </div>
                     </div>
                     <button
@@ -791,7 +861,7 @@ const InterestAssessment: React.FC = () => {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                       </svg>
-                      Reset to 5
+                      Reset to 0
                     </button>
                   </div>
 
@@ -806,6 +876,12 @@ const InterestAssessment: React.FC = () => {
                     ))}
                   </div>
 
+                  {errors.interests && (
+                    <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800">
+                      {errors.interests}
+                    </div>
+                  )}
+
                   {/* API Error */}
                   {apiError && (
                     <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 flex items-start gap-3">
@@ -815,6 +891,15 @@ const InterestAssessment: React.FC = () => {
                       <div>
                         <p className="font-semibold">Error</p>
                         <p className="text-sm">{apiError}</p>
+                        {shouldPromptLogin && (
+                          <button
+                            type="button"
+                            onClick={() => navigate('/login')}
+                            className="mt-3 inline-flex items-center text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+                          >
+                            Log in again →
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}

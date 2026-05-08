@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { getUserPerformance, getQuizHistory, type UserPerformance, type QuizAttempt } from '../../services/quizService';
+import { getActiveRecommendation, type RecommendationResponse } from '../../services/recommendationService';
 import LoadingSkeleton from '../../components/LoadingSkeleton';
 import EmptyState from '../../components/EmptyState';
 
@@ -10,6 +11,7 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [performance, setPerformance] = useState<UserPerformance | null>(null);
   const [history, setHistory] = useState<QuizAttempt[]>([]);
+  const [recommendation, setRecommendation] = useState<RecommendationResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [dismissedMotivation, setDismissedMotivation] = useState(false);
 
@@ -31,12 +33,14 @@ const Dashboard: React.FC = () => {
 
   const loadData = async () => {
     try {
-      const [perf, hist] = await Promise.allSettled([
+      const [perf, hist, rec] = await Promise.allSettled([
         getUserPerformance(),
         getQuizHistory(5),
+        getActiveRecommendation(),
       ]);
       if (perf.status === 'fulfilled') setPerformance(perf.value);
       if (hist.status === 'fulfilled') setHistory(hist.value);
+      if (rec.status === 'fulfilled') setRecommendation(rec.value);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -44,25 +48,25 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Generate personalized learning path based on interests
-  const getLearningPath = () => {
-    if (!userInterests) return [];
-    const primary = userInterests.primaryInterest;
-    const paths: Record<string, { steps: string[]; icon: string }> = {
-      'AI & Machine Learning': { icon: '🤖', steps: ['Python Basics', 'Data Structures', 'Statistics', 'ML Algorithms', 'Deep Learning', 'Projects'] },
-      'Web Development': { icon: '🌐', steps: ['HTML & CSS', 'JavaScript', 'React/Vue', 'Node.js', 'Databases', 'Deploy'] },
-      'Data Science': { icon: '📊', steps: ['Python', 'Pandas & NumPy', 'Data Viz', 'Statistics', 'ML Models', 'Capstone'] },
-      'Cybersecurity': { icon: '🔐', steps: ['Networking', 'Linux Basics', 'Ethical Hacking', 'Cryptography', 'Pen Testing', 'Certifications'] },
-      'Coding': { icon: '💻', steps: ['Programming Basics', 'Algorithms', 'Data Structures', 'OOP', 'Design Patterns', 'Projects'] },
-      'Mobile Development': { icon: '📱', steps: ['UI/UX Basics', 'React Native', 'APIs', 'State Management', 'Testing', 'Publish'] },
-      'Cloud Computing': { icon: '☁️', steps: ['Cloud Basics', 'AWS/Azure', 'Networking', 'DevOps', 'Security', 'Certifications'] },
-      'Game Development': { icon: '🎮', steps: ['Game Design', 'Unity/Unreal', 'C# Basics', 'Physics', '3D Modeling', 'Publish'] },
-    };
-    return paths[primary] || { icon: '📚', steps: ['Fundamentals', 'Core Concepts', 'Practice', 'Projects', 'Advanced', 'Mastery'] };
-  };
-
-  const learningPath = getLearningPath();
-  const completedSteps = performance ? Math.min(Math.floor(performance.overallStats.totalQuizzes / 2), (learningPath as any).steps?.length ?? 0) : 0;
+  const learningSteps = recommendation?.learningPath?.phases?.flatMap((phase) => phase.topics || []).slice(0, 6) || [];
+  const learningIcon = recommendation?.primaryDomain === 'AI & Machine Learning'
+    ? '🤖'
+    : recommendation?.primaryDomain === 'Web Development'
+    ? '🌐'
+    : recommendation?.primaryDomain === 'Data Science'
+    ? '📊'
+    : recommendation?.primaryDomain === 'Cybersecurity'
+    ? '🔐'
+    : recommendation?.primaryDomain === 'Coding'
+    ? '💻'
+    : recommendation?.primaryDomain === 'Mobile Development'
+    ? '📱'
+    : recommendation?.primaryDomain === 'Cloud Computing'
+    ? '☁️'
+    : recommendation?.primaryDomain === 'Game Development'
+    ? '🎮'
+    : '📚';
+  const completedSteps = performance ? Math.min(Math.floor(performance.overallStats.totalQuizzes / 2), learningSteps.length) : 0;
 
   // Download final results as text file
   const handleDownloadResults = () => {
@@ -286,12 +290,12 @@ const Dashboard: React.FC = () => {
         )}
 
         {/* Personalized Learning Path (#5) */}
-        {hasCompletedOnboarding && userInterests && (learningPath as any).steps && (
+        {hasCompletedOnboarding && userInterests && learningSteps.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-8">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">
-                  {(learningPath as any).icon} Your Learning Path
+                  {learningIcon} Your Learning Path
                 </h2>
                 <p className="text-slate-600 mt-1">Personalized for <strong>{userInterests.primaryInterest}</strong></p>
               </div>
@@ -303,7 +307,7 @@ const Dashboard: React.FC = () => {
               </button>
             </div>
             <div className="flex items-center gap-2 overflow-x-auto pb-2">
-              {(learningPath as any).steps.map((step: string, i: number) => (
+              {learningSteps.map((step: string, i: number) => (
                 <React.Fragment key={i}>
                   <div className={`flex-shrink-0 flex flex-col items-center gap-2`}>
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
@@ -319,7 +323,7 @@ const Dashboard: React.FC = () => {
                       {step}
                     </span>
                   </div>
-                  {i < (learningPath as any).steps.length - 1 && (
+                  {i < learningSteps.length - 1 && (
                     <div className={`flex-shrink-0 h-0.5 w-8 mt-[-16px] ${i < completedSteps ? 'bg-emerald-400' : 'bg-slate-200'}`} />
                   )}
                 </React.Fragment>
@@ -329,11 +333,11 @@ const Dashboard: React.FC = () => {
               <div className="flex-1 bg-slate-100 rounded-full h-2">
                 <div
                   className="bg-gradient-to-r from-indigo-500 to-emerald-500 h-2 rounded-full transition-all"
-                  style={{ width: `${(completedSteps / (learningPath as any).steps.length) * 100}%` }}
+                  style={{ width: `${learningSteps.length ? (completedSteps / learningSteps.length) * 100 : 0}%` }}
                 />
               </div>
               <span className="text-sm font-semibold text-slate-700">
-                {completedSteps}/{(learningPath as any).steps.length} completed
+                {completedSteps}/{learningSteps.length} completed
               </span>
             </div>
           </div>

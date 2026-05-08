@@ -125,74 +125,7 @@ const defaultLearningGoals: LearningGoal[] = [
   { id: '8', title: 'Blockchain', description: 'Smart contracts, Ethereum, and decentralized apps', category: 'Technology', selected: false },
 ];
 
-const defaultQuizzes: Quiz[] = [
-  {
-    id: '1',
-    title: 'Web Development Basics',
-    description: 'Test your knowledge of HTML, CSS, and JavaScript fundamentals',
-    completed: false,
-    questions: [
-      {
-        id: 'q1',
-        text: 'What does HTML stand for?',
-        options: ['HyperText Markup Language', 'High-Level Text Markup', 'Home Tool Markup Language', 'Hyperlink Text Markup'],
-        correctAnswer: 0,
-      },
-      {
-        id: 'q2',
-        text: 'Which CSS property is used to change the text color?',
-        options: ['font-color', 'text-color', 'color', 'text-style'],
-        correctAnswer: 2,
-      },
-      {
-        id: 'q3',
-        text: 'Which method is used to add an element to the end of an array in JavaScript?',
-        options: ['push()', 'append()', 'add()', 'insert()'],
-        correctAnswer: 0,
-      },
-    ],
-  },
-  {
-    id: '2',
-    title: 'Data Science Fundamentals',
-    description: 'Assess your understanding of data analysis and statistics',
-    completed: false,
-    questions: [
-      {
-        id: 'q4',
-        text: 'What is the purpose of a pandas DataFrame?',
-        options: ['Data visualization', 'Data manipulation and analysis', 'Machine learning', 'Web scraping'],
-        correctAnswer: 1,
-      },
-      {
-        id: 'q5',
-        text: 'What does "NaN" stand for in data science?',
-        options: ['Not a Number', 'No Available Number', 'Null and None', 'Number Available Now'],
-        correctAnswer: 0,
-      },
-    ],
-  },
-  {
-    id: '3',
-    title: 'React Concepts',
-    description: 'Test your React knowledge including hooks and components',
-    completed: false,
-    questions: [
-      {
-        id: 'q6',
-        text: 'What is the purpose of useEffect hook?',
-        options: ['State management', 'Side effects and lifecycle', 'Styling components', 'Routing'],
-        correctAnswer: 1,
-      },
-      {
-        id: 'q7',
-        text: 'Which hook is used to manage state in functional components?',
-        options: ['useState', 'useEffect', 'useContext', 'useReducer'],
-        correctAnswer: 0,
-      },
-    ],
-  },
-];
+const defaultQuizzes: Quiz[] = [];
 
 export const useStore = create<AppState>()(
   persist(
@@ -308,9 +241,11 @@ export const useStore = create<AppState>()(
 
             // Fetch user's interests if they exist
             try {
-              const response = await fetch('/api/interests', {
+              const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+              const token = localStorage.getItem('plpg_access_token');
+              const response = await fetch(`${apiBaseUrl}/interests`, {
                 headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('token')}`
+                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
                 }
               });
               if (response.ok) {
@@ -500,4 +435,3 @@ export const useStore = create<AppState>()(
     }
   )
 );
-

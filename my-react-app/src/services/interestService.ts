@@ -1,3 +1,5 @@
+import { buildApiError, formatValidationErrors } from './apiError';
+
 const INTEREST_API_BASE = import.meta.env.VITE_INTEREST_API_URL || 'http://localhost:5000/api';
 
 const getAuthToken = (): string | null => {
@@ -155,9 +157,16 @@ export const submitInterestAssessment = async (
     }),
   });
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data.error || data.detail || data.message || 'Failed to submit assessment');
+    const validation = formatValidationErrors(data);
+    throw buildApiError(
+      {
+        ...data,
+        detail: validation || data.detail,
+      },
+      res.status
+    );
   }
   return data as AnalysisResponse;
 };
@@ -169,9 +178,31 @@ export const resolveTie = async (selectedInterest: string): Promise<any> => {
     body: JSON.stringify({ selected_interest: selectedInterest }),
   });
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(data.error || data.detail || data.message || 'Failed to resolve tie');
+    throw buildApiError(data, res.status);
+  }
+  return data;
+};
+
+export const getCareerPaths = async (domain: string): Promise<{
+  success: boolean;
+  career_paths: Array<{
+    title: string;
+    industry: string;
+    salary_range: string;
+    growth_potential: string;
+    required_skills?: string[];
+    entry_requirements?: string;
+  }>;
+}> => {
+  const res = await fetch(`${INTEREST_API_BASE}/interest/careers/${encodeURIComponent(domain)}`, {
+    method: 'GET',
+    headers: getAuthHeaders(),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw buildApiError(data, res.status);
   }
   return data;
 };

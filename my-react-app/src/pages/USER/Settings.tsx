@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
+import { buildApiError } from '../../services/apiError';
 import LoadingSkeleton from '../../components/LoadingSkeleton';
 
 interface SettingsData {
@@ -42,8 +43,8 @@ const Settings: React.FC = () => {
       const token = localStorage.getItem('plpg_access_token');
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
       const response = await fetch(`${apiBaseUrl}/settings`, { headers: { 'Authorization': `Bearer ${token}` } });
-      if (!response.ok) throw new Error('Failed to fetch settings');
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw buildApiError(data, response.status);
       setSettings({
         email: data.email || '',
         first_name: data.first_name || '',
@@ -80,7 +81,8 @@ const Settings: React.FC = () => {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ preferences: settings?.preferences, notifications: settings?.notifications, privacy: settings?.privacy })
       });
-      if (!response.ok) throw new Error('Failed to update settings');
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw buildApiError(data, response.status);
       setSuccess('Settings saved successfully!');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
@@ -105,7 +107,8 @@ const Settings: React.FC = () => {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(passwordData)
       });
-      if (!response.ok) throw new Error('Failed to change password');
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw buildApiError(data, response.status);
       setSuccess('Password changed successfully!');
       setPasswordData({ current_password: '', new_password: '', confirm_password: '' });
       setTimeout(() => setSuccess(''), 3000);
@@ -130,7 +133,8 @@ const Settings: React.FC = () => {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: deletePassword, confirmation: deleteConfirmation })
       });
-      if (!response.ok) throw new Error('Failed to delete account');
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw buildApiError(data, response.status);
       await logout();
       navigate('/');
     } catch (err: any) {
