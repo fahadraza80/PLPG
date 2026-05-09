@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { registerUser, loginUser, logoutUser, getCurrentUserData } from '../services/authService';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
 export interface User {
   id: string;
   firstName: string;
@@ -307,12 +309,12 @@ export const useStore = create<AppState>()(
             });
 
             // Fetch user's interests if they exist
-            try {
-              const response = await fetch('/api/interests', {
-                headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-              });
+              try {
+               const response = await fetch(`${API_BASE_URL}/interests`, {
+                 headers: {
+                   'Authorization': `Bearer ${localStorage.getItem('plpg_access_token')}`
+                 }
+               });
               if (response.ok) {
                 const interestData = await response.json();
                 if (interestData.completed) {
@@ -500,4 +502,3 @@ export const useStore = create<AppState>()(
     }
   )
 );
-

@@ -12,6 +12,37 @@ const getAuthHeaders = () => {
   };
 };
 
+const formatApiError = (data: any, status: number): string => {
+  const detail = data?.detail || data?.error || data?.message;
+  const code = data?.error_code;
+
+  if (status === 401 && code === 'TOKEN_EXPIRED') {
+    return 'Your session has expired. Please log in again.';
+  }
+
+  if (status === 401 && code === 'INVALID_TOKEN') {
+    return 'Your session token is invalid. Please log in again.';
+  }
+
+  if (status === 401 && code === 'INVALID_TOKEN_TYPE') {
+    return 'Session token type is invalid. Please log in again.';
+  }
+
+  if (status === 401 && code === 'MALFORMED_TOKEN') {
+    return 'Session token is malformed. Please log in again.';
+  }
+
+  if (status === 401 && code === 'NO_TOKEN') {
+    return 'No session token was provided. Please log in first.';
+  }
+
+  if (status === 401 && code === 'INVALID_HEADER') {
+    return 'Authorization header is malformed. Please log in again.';
+  }
+
+  return detail || 'Request failed';
+};
+
 export type InterestDomain =
   | 'Coding'
   | 'Web Development'
@@ -120,6 +151,10 @@ export interface AnalysisResponse {
     no_random_values?: boolean;
   };
   timestamp: string;
+  storage?: {
+    saved: boolean;
+    message: string;
+  };
   metadata?: {
     system: string;
     version: string;
@@ -157,21 +192,24 @@ export const submitInterestAssessment = async (
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || data.detail || data.message || 'Failed to submit assessment');
+    throw new Error(formatApiError(data, res.status) || 'Failed to submit assessment');
   }
   return data as AnalysisResponse;
 };
 
-export const resolveTie = async (selectedInterest: string): Promise<any> => {
+export const resolveTie = async (selectedInterest: string, rankedInterests?: AnalysisResponse['ranked_interests']): Promise<any> => {
   const res = await fetch(`${INTEREST_API_BASE}/interest/resolve-tie`, {
     method: 'POST',
     headers: getAuthHeaders(),
-    body: JSON.stringify({ selected_interest: selectedInterest }),
+    body: JSON.stringify({
+      selected_interest: selectedInterest,
+      ranked_interests: rankedInterests || [],
+    }),
   });
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data.error || data.detail || data.message || 'Failed to resolve tie');
+    throw new Error(formatApiError(data, res.status) || 'Failed to resolve tie');
   }
   return data;
 };

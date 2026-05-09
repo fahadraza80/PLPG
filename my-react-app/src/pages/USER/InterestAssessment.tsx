@@ -44,15 +44,15 @@ const DOMAIN_COLORS: Record<InterestDomain, string> = {
 };
 
 const defaultScores: InterestScores = {
-  Coding: 5,
-  'Web Development': 5,
-  'Game Development': 5,
-  Cybersecurity: 5,
-  'Data Science': 5,
-  'Mobile Development': 5,
-  'Cloud Computing': 5,
-  'AI & Machine Learning': 5,
-  'Physical Games / Sports': 5,
+  Coding: 0,
+  'Web Development': 0,
+  'Game Development': 0,
+  Cybersecurity: 0,
+  'Data Science': 0,
+  'Mobile Development': 0,
+  'Cloud Computing': 0,
+  'AI & Machine Learning': 0,
+  'Physical Games / Sports': 0,
 };
 
 interface FormErrors {
@@ -82,10 +82,13 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {
         <React.Fragment key={step.num}>
           <div className="flex flex-col items-center">
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${currentStep >= step.num
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
-                  : 'bg-slate-200 text-slate-500'
-                }`}
+              className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                currentStep > step.num
+                  ? 'bg-green-600 text-white shadow-lg shadow-green-200'
+                  : currentStep === step.num
+                    ? 'bg-indigo-600 text-white ring-4 ring-indigo-100 shadow-lg shadow-indigo-200'
+                    : 'bg-slate-200 text-slate-500'
+              }`}
             >
               {currentStep > step.num ? (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,8 +98,11 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep }) => {
                 step.num
               )}
             </div>
-            <span className={`mt-2 text-xs font-medium ${currentStep >= step.num ? 'text-indigo-600' : 'text-slate-400'}`}>
+            <span className={`mt-2 text-xs font-medium ${
+              currentStep > step.num ? 'text-green-600' : currentStep === step.num ? 'text-indigo-700' : 'text-slate-400'
+            }`}>
               {step.label}
+              {currentStep === step.num && <span className="ml-1 font-bold">(Current)</span>}
             </span>
           </div>
           {idx < steps.length - 1 && (
@@ -182,7 +188,8 @@ interface InterestSliderProps {
 
 const InterestSlider: React.FC<InterestSliderProps> = ({ domain, value, onChange }) => {
   const getValueLabel = (val: number) => {
-    if (val <= 2) return 'Not Interested';
+    if (val === 0) return 'Not Rated';
+    if (val <= 2) return 'Low Interest';
     if (val <= 4) return 'Slightly Interested';
     if (val <= 6) return 'Moderately Interested';
     if (val <= 8) return 'Very Interested';
@@ -211,7 +218,7 @@ const InterestSlider: React.FC<InterestSliderProps> = ({ domain, value, onChange
       <div className="relative">
         <input
           type="range"
-          min={1}
+          min={0}
           max={10}
           step={1}
           value={value}
@@ -223,7 +230,7 @@ const InterestSlider: React.FC<InterestSliderProps> = ({ domain, value, onChange
             [&::-webkit-slider-thumb]:hover:bg-indigo-700 [&::-webkit-slider-thumb]:transition-colors"
         />
         <div className="flex justify-between text-[10px] text-slate-400 mt-1 px-1">
-          <span>1</span>
+          <span>0</span>
           <span>5</span>
           <span>10</span>
         </div>
@@ -408,24 +415,19 @@ const ResultsPanel: React.FC<ResultsPanelProps> = ({ result }) => {
       )}
 
       {/* Action Buttons */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="space-y-3">
+        <div className="p-4 rounded-xl border border-green-200 bg-green-50 text-green-800">
+          <p className="font-semibold text-sm">✅ Your information is stored.</p>
+          <p className="text-xs mt-1">You can continue from your dashboard at any time.</p>
+        </div>
         <button
-          onClick={() => navigate('/profile')}
-          className="flex-1 py-3 px-6 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
+          onClick={() => navigate('/dashboard')}
+          className="w-full py-3 px-6 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 transition shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
           Go to Dashboard
-        </button>
-        <button
-          onClick={() => navigate('/quizzes')}
-          className="flex-1 py-3 px-6 bg-white text-indigo-600 font-semibold rounded-xl border-2 border-indigo-200 hover:border-indigo-300 hover:bg-indigo-50 transition flex items-center justify-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          Start Learning
         </button>
       </div>
     </div>
@@ -590,13 +592,18 @@ const InterestAssessment: React.FC = () => {
   const handleTieResolution = async (selectedDomain: string) => {
     setTieResolvingLoading(true);
     try {
-      await resolveTie(selectedDomain);
+      const tieResolution = await resolveTie(selectedDomain, result?.ranked_interests);
       setShowTieResolution(false);
       
       // Update result with user decision
       let updatedResult = result;
       if (result) {
-        updatedResult = { ...result, primary_interest: selectedDomain };
+        updatedResult = {
+          ...result,
+          primary_interest: selectedDomain,
+          recommendation: tieResolution?.recommendation || result.recommendation,
+          storage: tieResolution?.storage || result.storage,
+        };
         setResult(updatedResult);
       }
       
@@ -633,6 +640,11 @@ const InterestAssessment: React.FC = () => {
                 }`}></span>
             </span>
             {apiStatus === 'online' ? 'ML API Online' : apiStatus === 'offline' ? 'ML API Offline' : 'Checking API...'}
+          </div>
+          <div className="flex flex-wrap justify-center gap-2 mb-4">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">Interest Check</span>
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">AI-Powered</span>
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">Saved to Profile</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">
             Personalized Learning Path Checker
@@ -780,7 +792,7 @@ const InterestAssessment: React.FC = () => {
                       </div>
                       <div>
                         <h2 className="text-xl font-bold text-slate-900">Rate Your Interests</h2>
-                        <p className="text-sm text-slate-500">Score each domain from 1 (Low) to 10 (High)</p>
+                        <p className="text-sm text-slate-500">Score each domain from 0 (Not rated) to 10 (High)</p>
                       </div>
                     </div>
                     <button
@@ -791,7 +803,7 @@ const InterestAssessment: React.FC = () => {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                       </svg>
-                      Reset to 5
+                      Reset to 0
                     </button>
                   </div>
 
@@ -924,6 +936,21 @@ const InterestAssessment: React.FC = () => {
                 Start Over
               </button>
             )}
+
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+                <span className="text-lg">🛣️</span> Interest Check Roadmap
+              </h3>
+              <ol className="space-y-2 text-sm text-slate-700 list-decimal pl-5">
+                <li>Complete personal profile and interest rating.</li>
+                <li>Generate AI recommendations and save your profile.</li>
+                <li>Start quizzes from the Quizzes section.</li>
+                <li>Use dashboard insights to track progress.</li>
+              </ol>
+              <p className="mt-3 text-xs text-slate-500">
+                Learning Goals module is optional and not required to complete Interest Check.
+              </p>
+            </div>
           </div>
         </div>
       </div>

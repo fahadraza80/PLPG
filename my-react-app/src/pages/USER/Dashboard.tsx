@@ -171,17 +171,17 @@ const Dashboard: React.FC = () => {
                   🎯 Start Your Learning Journey
                 </h2>
                 <p className="text-indigo-100 mb-6 text-lg leading-relaxed">
-                  Welcome to your dashboard! Let's personalize your experience. Start with the <strong>Interest Checker</strong> to tell us what topics you enjoy. We'll generate a short, personalized quiz from your choices. Complete it to unlock a tailored learning path designed just for you.
+                  Welcome to your dashboard! Let's personalize your experience. Start in <strong>Quizzes</strong>, open the <strong>Interest Checker</strong>, and tell us what topics you enjoy. Then generate personalized quizzes and unlock your tailored learning path.
                 </p>
                 <div className="flex flex-wrap gap-4">
                   <button
-                    onClick={() => navigate('/interest-check')}
+                    onClick={() => navigate('/quizzes')}
                     className="px-8 py-4 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center gap-3"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
-                    Take Interest Assessment
+                    Open Quizzes
                   </button>
                   <div className="flex items-center gap-2 text-indigo-100">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,13 +208,13 @@ const Dashboard: React.FC = () => {
                 </p>
               </div>
               <button
-                onClick={() => navigate('/interest-check')}
+                onClick={() => navigate('/quizzes')}
                 className="px-4 py-2 text-indigo-600 hover:bg-indigo-50 rounded-lg font-medium transition-colors flex items-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                Retake Assessment
+                Retake in Quizzes
               </button>
               <button
                 onClick={() => navigate('/learning-path')}
