@@ -526,7 +526,18 @@ class InterestIntelligenceEngine:
             }
         
         db = self.CAREER_DATABASE[primary_interest]
-        
+        beginner_topics = db["beginner"]
+        intermediate_topics = db["intermediate"]
+        advanced_topics = db["advanced"]
+        topic_pool = beginner_topics + intermediate_topics + advanced_topics
+        top_percentage = float(ranked[0]["percentage"].rstrip('%'))
+        secondary = ranked[1]["name"] if len(ranked) > 1 else None
+        entry_requirements = (
+            "Beginner-friendly: fundamentals + consistent weekly practice"
+            if top_percentage < 30
+            else "Foundational skills + portfolio projects"
+        )
+
         # Career paths
         career_paths = [
             {
@@ -534,10 +545,10 @@ class InterestIntelligenceEngine:
                 "industry": p["industry"],
                 "salary_range": p["salary"],
                 "growth_potential": p["growth"],
-                "required_skills": ["TBD"],
-                "entry_requirements": "Bachelor's degree or equivalent experience"
+                "required_skills": topic_pool[idx: idx + 4] if len(topic_pool) > idx else topic_pool[:4],
+                "entry_requirements": entry_requirements
             }
-            for p in db["paths"]
+            for idx, p in enumerate(db["paths"])
         ]
         
         # Skill roadmap
@@ -545,34 +556,30 @@ class InterestIntelligenceEngine:
             {
                 "level": "Beginner",
                 "duration": "4-6 weeks",
-                "topics": db["beginner"],
-                "projects": ["Build small projects", "Complete tutorials"],
+                "topics": beginner_topics,
+                "projects": [f"Build a beginner {primary_interest} mini-project", "Complete guided tutorials"],
                 "resources": []
             },
             {
                 "level": "Intermediate",
                 "duration": "6-8 weeks",
-                "topics": db["intermediate"],
-                "projects": ["Real-world projects", "Open source contribution"],
+                "topics": intermediate_topics,
+                "projects": [f"Build a real-world {primary_interest} project", "Contribute to open source"],
                 "resources": []
             },
             {
                 "level": "Advanced",
                 "duration": "8-12 weeks",
-                "topics": db["advanced"],
-                "projects": ["Architecture design", "Leadership projects"],
+                "topics": advanced_topics,
+                "projects": [f"Design scalable {primary_interest} architecture", "Lead a capstone project"],
                 "resources": []
             }
         ]
         
         # Next learning step
-        beginner_topics = db["beginner"]
         learning_next_step = f"Start with: {beginner_topics[0]}"
         
         # Justification
-        top_percentage = float(ranked[0]["percentage"].rstrip('%'))
-        secondary = ranked[1]["name"] if len(ranked) > 1 else None
-        
         justification = (
             f"You have a strong interest in {primary_interest} ({top_percentage:.1f}%). "
             f"Your scores show this is your best-fit domain. "
@@ -589,10 +596,10 @@ class InterestIntelligenceEngine:
                 "type": "digital",
                 "message": f"Online courses, projects, and self-paced learning for {primary_interest}",
                 "suggestions": [
-                    "Take structured online courses",
-                    "Build real projects",
-                    "Join relevant communities",
-                    "Practice regularly with challenges"
+                    f"Start with {beginner_topics[0]} and complete one short module per week",
+                    f"Build practical projects in {primary_interest}",
+                    f"Join {primary_interest} communities for feedback",
+                    f"Practice with quizzes and review weak topics regularly"
                 ]
             }
         }

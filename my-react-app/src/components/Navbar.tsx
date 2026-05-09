@@ -110,15 +110,6 @@ const Navbar: React.FC = () => {
               >
                 Contact
               </Link>
-              <Link
-                to="/interest-check"
-                className={`relative text-sm font-medium transition-colors duration-200 ${location.pathname === '/interest-check'
-                    ? 'text-indigo-600'
-                    : 'text-gray-700 hover:text-indigo-600'
-                  } after:absolute after:bottom-0 after:left-0 after:h-0.5 after:bg-indigo-600 after:transition-all after:duration-300 ${location.pathname === '/interest-check' ? 'after:w-full' : 'after:w-0 hover:after:w-full'}`}
-              >
-                Interest Check
-              </Link>
               {isAuthenticated && (
                 <>
                   <Link
@@ -387,16 +378,6 @@ const Navbar: React.FC = () => {
               >
                 Contact
               </Link>
-              <Link
-                to="/interest-check"
-                onClick={() => setIsMenuOpen(false)}
-                className={`px-4 py-2 rounded-lg font-semibold transition-all duration-200 ${location.pathname === '/interest-check'
-                    ? 'bg-indigo-50 text-indigo-600'
-                    : 'text-slate-800 hover:bg-slate-50'
-                  }`}
-              >
-                Interest Check
-              </Link>
               {isAuthenticated && (
                 <>
                   <Link
@@ -450,4 +431,3 @@ const Navbar: React.FC = () => {
 };
 
 export default Navbar;
-

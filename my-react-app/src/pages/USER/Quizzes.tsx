@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import {
@@ -20,6 +20,20 @@ const Quizzes: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [generatingQuiz, setGeneratingQuiz] = useState(false);
   const primaryInterest = userInterests?.primaryInterest;
+  const groupedHistory = useMemo(() => {
+    const grouped = history.reduce<Record<string, QuizAttempt[]>>((acc, attempt) => {
+      if (!acc[attempt.interest]) acc[attempt.interest] = [];
+      acc[attempt.interest].push(attempt);
+      return acc;
+    }, {});
+
+    return Object.entries(grouped).map(([interest, attempts]) => {
+      const averageScore = Math.round(
+        attempts.reduce((sum, attempt) => sum + attempt.score, 0) / attempts.length
+      );
+      return { interest, attempts, averageScore };
+    }).sort((a, b) => b.averageScore - a.averageScore);
+  }, [history]);
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -106,11 +120,11 @@ const Quizzes: React.FC = () => {
             Welcome back, {user.firstName}! 👋
           </h1>
           <p className="text-slate-600">
-            Your personalized quiz dashboard
+            Your quizzes + interest checker dashboard
           </p>
         </div>
 
-        {/* Interest Check Status */}
+        {/* Interest Checker */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-6">
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -130,8 +144,12 @@ const Quizzes: React.FC = () => {
                   )}
                 </div>
                 <h2 className="text-xl font-semibold text-slate-900">
-                  {hasCompletedOnboarding ? 'Interest Assessment Complete' : 'Complete Your Interest Assessment'}
+                  {hasCompletedOnboarding ? 'Interest Checker Complete' : 'Complete Interest Checker'}
                 </h2>
+              </div>
+              <div className="flex flex-wrap gap-2 mb-3">
+                <span className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold">Step 1 of quiz flow</span>
+                <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-semibold">Required before AI quizzes</span>
               </div>
 
               {hasCompletedOnboarding && userInterests ? (
@@ -162,14 +180,14 @@ const Quizzes: React.FC = () => {
                 </div>
               ) : (
                 <div className="ml-13">
-                  <p className="text-slate-600 mb-4">
-                    Take a quick assessment to discover your learning interests and get personalized recommendations.
-                  </p>
+                    <p className="text-slate-600 mb-4">
+                      Take a quick assessment to discover your learning interests and get personalized recommendations.
+                    </p>
                   <button
                     onClick={() => navigate('/interest-check')}
                     className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors flex items-center gap-2"
                   >
-                    Start Interest Assessment
+                    Start Interest Checker
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                     </svg>
@@ -250,39 +268,52 @@ const Quizzes: React.FC = () => {
         </div>
 
         {/* Recent Quiz History */}
-        {history.length > 0 && (
+        {groupedHistory.length > 0 && (
           <div>
             <h2 className="text-2xl font-bold text-slate-900 mb-4">Recent Quizzes</h2>
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Interest</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Level</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Score</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {history.map((attempt) => (
-                    <tr key={attempt.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => navigate(`/quiz/results/${attempt.id}`)}>
-                      <td className="px-6 py-4 text-sm text-slate-900">{attempt.interest}</td>
-                      <td className="px-6 py-4 text-sm text-slate-600">{attempt.level}</td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${attempt.score >= 80 ? 'bg-green-100 text-green-700' :
-                          attempt.score >= 60 ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-red-100 text-red-700'
-                          }`}>
-                          {attempt.score}% ({attempt.correctCount}/{attempt.totalQuestions})
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-600">
-                        {new Date(attempt.completedAt).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-4">
+              {groupedHistory.map((group) => (
+                <div key={group.interest} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-slate-900">{group.interest}</h3>
+                      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
+                        {group.attempts.length} attempt{group.attempts.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <span className="text-sm font-semibold text-slate-700">
+                      Average Score: {group.averageScore}%
+                    </span>
+                  </div>
+                  <table className="w-full">
+                    <thead className="bg-slate-50 border-b border-slate-200">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Level</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Score</th>
+                        <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {group.attempts.map((attempt) => (
+                        <tr key={attempt.id} className="hover:bg-slate-50 cursor-pointer" onClick={() => navigate(`/quiz/results/${attempt.id}`)}>
+                          <td className="px-6 py-4 text-sm text-slate-600">{attempt.level}</td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${attempt.score >= 80 ? 'bg-green-100 text-green-700' :
+                              attempt.score >= 60 ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-red-100 text-red-700'
+                              }`}>
+                              {attempt.score}% ({attempt.correctCount}/{attempt.totalQuestions})
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-slate-600">
+                            {new Date(attempt.completedAt).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
             </div>
           </div>
         )}

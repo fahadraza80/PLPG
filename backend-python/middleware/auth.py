@@ -63,8 +63,36 @@ def authenticate_token(f):
             decoded = verify_user_token(token, is_refresh=False)
             
             if not decoded:
+                try:
+                    payload = jwt.decode(
+                        token,
+                        options={
+                            'verify_signature': False,
+                            'verify_exp': False,
+                            'verify_aud': False,
+                            'verify_iss': False
+                        }
+                    )
+                    exp = payload.get('exp')
+                    token_type = payload.get('type')
+                    if exp and datetime.utcnow().timestamp() >= exp:
+                        return jsonify({
+                            'detail': 'Token has expired. Please log in again.',
+                            'error_code': 'TOKEN_EXPIRED'
+                        }), 401
+                    if token_type and token_type != 'user_access':
+                        return jsonify({
+                            'detail': f'Invalid token type: {token_type}. Expected user_access.',
+                            'error_code': 'INVALID_TOKEN_TYPE'
+                        }), 401
+                except Exception:
+                    return jsonify({
+                        'detail': 'Malformed token. Please log in again.',
+                        'error_code': 'MALFORMED_TOKEN'
+                    }), 401
+
                 return jsonify({
-                    'detail': 'Invalid token',
+                    'detail': 'Invalid token signature or claims. Please log in again.',
                     'error_code': 'INVALID_TOKEN'
                 }), 401
             
