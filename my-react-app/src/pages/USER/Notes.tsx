@@ -49,6 +49,7 @@ const Notes: React.FC = () => {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeInterest, setActiveInterest] = useState<string>('all');
+  const [markingRead, setMarkingRead] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
@@ -80,11 +81,26 @@ const Notes: React.FC = () => {
     try {
       const res = await apiFetch(`/notes/${note._id}`);
       setSelectedNote(res.data);
-      if (!readIds.includes(note._id)) {
-        setReadIds(prev => [...prev, note._id]);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const markNoteComplete = async (noteId: string) => {
+    setMarkingRead(true);
+    try {
+      const res = await fetch(`${API}/notes/${noteId}/read`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem(TOKEN_KEY)}` }
+      });
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      if (!readIds.includes(noteId)) {
+        setReadIds(prev => [...prev, noteId]);
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setMarkingRead(false);
     }
   };
 
@@ -280,12 +296,22 @@ const Notes: React.FC = () => {
                 >
                   Close
                 </button>
-                <button
-                  onClick={() => { setSelectedNote(null); navigate('/quizzes'); }}
-                  className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
-                >
-                  Take Quiz on {selectedNote.interest} →
-                </button>
+                {!readIds.includes(selectedNote._id) ? (
+                  <button
+                    onClick={() => markNoteComplete(selectedNote._id)}
+                    disabled={markingRead}
+                    className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-60"
+                  >
+                    {markingRead ? 'Saving…' : '✓ Mark as Complete'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { setSelectedNote(null); navigate('/quizzes'); }}
+                    className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors"
+                  >
+                    Take Quiz on {selectedNote.interest} →
+                  </button>
+                )}
               </div>
             </div>
           </div>
