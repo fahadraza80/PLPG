@@ -44,15 +44,20 @@ def get_note(note_id):
     doc = col.find_one({'_id': ObjectId(note_id)})
     if not doc:
         return jsonify({'success': False, 'message': 'Note not found'}), 404
+    return jsonify({'success': True, 'data': serialize(doc)})
 
-    # Track read progress
+
+# ── POST /api/notes/<id>/read  (mark note as fully read) ────
+@notes_bp.route('/<note_id>/read', methods=['POST'])
+@authenticate_token
+def mark_note_read(note_id):
     progress_col = get_collection('note_progress')
     progress_col.update_one(
         {'userId': g.user['id'], 'noteId': note_id},
         {'$set': {'userId': g.user['id'], 'noteId': note_id, 'readAt': datetime.utcnow()}},
         upsert=True
     )
-    return jsonify({'success': True, 'data': serialize(doc)})
+    return jsonify({'success': True})
 
 
 # ── GET /api/notes/progress/me  (which notes user has read) ─
